@@ -1,0 +1,101 @@
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: otel-collector-config
+  namespace: kube-logging
+data:
+  config.yaml: |-
+    receivers:
+      fluentforward:
+        endpoint: 0.0.0.0:8006
+
+    processors:
+      memory_limiter:
+        check_interval: 1s
+        limit_mib: 2000
+      batch:
+
+    exporters:
+      
+      logging:
+
+      file:
+        path: /logs/logs.json
+
+      otlp/elastic:
+        endpoint: http://elasticsearch:9200
+        tls:
+          insecure: true
+
+      
+    service:
+      pipelines:
+        logs:
+          receivers: [fluentforward]
+          processors: [batch]
+          exporters: [logging, otlp/elastic, file]
+
+---
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: otel-collector
+  namespace: kube-logging
+  labels:
+    app: opentelemetry
+    component: otel-collector
+spec:
+  selector:
+    matchLabels:
+      app: opentelemetry
+      component: otel-collector
+  template:
+    metadata:
+      labels:
+        app: opentelemetry
+        component: otel-collector
+    spec:
+      containers:
+      - name: otel-collector
+        image: otel/opentelemetry-collector-contrib:latest
+        resources:
+          limits:
+            cpu: 100m
+            memory: 200Mi
+          requests:
+            cpu: 100m
+            memory: 200Mi
+        volumeMounts:
+        - mountPath: /etc/otel/config.yaml
+          name: data
+          subPath: config.yaml
+          readOnly: true
+        - mountPath: /logs
+          name: logdir
+      terminationGracePeriodSeconds: 30
+      volumes:
+      - name: data
+        configMap:
+          name: otel-collector-config
+      - name: logdir
+        hostPath:
+          path: /home/ranand/log-poc/fluentd/fluent-bit/logs
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: otel-collector
+  namespace: kube-logging
+  labels:
+    app: opentelemetry
+    component: otel-collector
+spec:
+  ports:
+  - name: metrics # Default endpoint for querying metrics.
+    port: 8888
+  - name: forward
+    port: 8006
+  selector:
+    component: otel-collector

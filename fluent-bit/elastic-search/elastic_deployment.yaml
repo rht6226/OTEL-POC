@@ -1,0 +1,53 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: elasticsearch
+  namespace: kube-logging
+spec:
+  serviceName: elasticsearch
+  selector:
+    matchLabels:
+      app: elasticsearch
+  template:
+    metadata:
+      labels:
+        app: elasticsearch
+    spec:
+      tolerations:
+      - operator: Exists
+      containers:
+      - image: docker.elastic.co/elasticsearch/elasticsearch:7.12.1
+        imagePullPolicy: Always
+        name: elasticsearch
+        env:
+        - name: discovery.type
+          value: single-node
+        ports:
+        - containerPort: 9200
+        - containerPort: 9300
+          name: elasticsearch
+        volumeMounts:
+        - name: elastic-storage
+          mountPath: /usr/share/elasticsearch/data
+        # - name: config
+        #   mountPath: /usr/share/elasticsearch/config/elasticsearch.yml
+        #   readOnly: true
+        #   subPath: elasticsearch.yml
+        resources:
+          limits:
+            memory: 4Gi
+          requests:
+            memory: 4Gi
+            cpu: 1000m
+      volumes:
+      - name: elastic-storage
+        emptyDir: {}
+      # - name: config
+      #   configMap:
+      #     name: elasticsearch-config
+      imagePullSecrets:
+      - name: local-registry
+      nodeName: node1
+
+
+
