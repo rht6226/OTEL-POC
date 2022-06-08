@@ -8,52 +8,28 @@ data:
   config.yaml: |-
     receivers:
       filelog:
+
         include:
-          # - /var/log/pods/*/*/*.log
-          # - /var/log/containers/cudeploy*.log
-          - /usr/logs/*log
-        exclude:
-          # Exclude logs from all containers named otel-collector
-          - /var/log/pods/*/otel-collector/*.log
+          - /var/log/containers/log-gen*.log
+        
         start_at: beginning
         include_file_path: true
         include_file_name: false
+
         operators:
       
           - type: regex_parser
             id: parser-crio
             regex: '^(?P<time>[^ Z]+) (?P<stream>stdout|stderr) (?P<logtag>[^ ]*) (?P<log>.*)$'
-            # output: extract_metadata_from_filepath
             timestamp:
               parse_from: body.time
               layout_type: gotime
               layout: '2006-01-02T15:04:05.000000000-07:00'
-         
-          ####### Extract metadata from file path
-          - type: regex_parser
-            id: extract_metadata_from_filepath
-            regex: '^.*\/(?P<namespace>[^_]+)_(?P<pod_name>[^_]+)_(?P<uid>[a-f0-9\-]{36})\/(?P<container_name>[^\._]+)\/(?P<restart_count>\d+)\.log$'
-            parse_from: attributes["log.file.path"]
 
           ####### Move out attributes to Attributes
           - type: move
             from: body.stream
-            to: attributes["log.iostream"]
-          - type: move
-            from: body.container_name
-            to: attributes["k8s.container.name"]
-          - type: move
-            from: body.namespace
-            to: attributes["k8s.namespace.name"]
-          - type: move
-            from: body.pod_name
-            to: attributes["k8s.pod.name"]
-          - type: move
-            from: body.restart_count
-            to: attributes["k8s.container.restart_count"]
-          - type: move
-            from: body.uid
-            to: attributes["k8s.pod.uid"]
+            to: body
           - type: move
             from: body.log
             to: body
@@ -89,10 +65,6 @@ data:
           - from: connection
 
     exporters:
-      
-      # file
-      # file:
-      #   path: /logs/logs.json
 
       logging:
 
@@ -137,38 +109,30 @@ spec:
             cpu: 100m
             memory: 200Mi
         volumeMounts:
-        # - mountPath: /var/log
-        #   name: varlog
-        #   readOnly: true
-        # - mountPath: /var/lib/docker/containers
-        #   name: varlibdockercontainers
-        #   readOnly: true
+        - mountPath: /var/log
+          name: varlog
+          readOnly: true
+        
         - mountPath: /etc/otel/config.yaml
           name: data
           subPath: config.yaml
           readOnly: true
-        - mountPath: /usr/logs
-          name: examplelog
-          readOnly: true
-        # - mountPath: /logs
-        #   name: logdir
+      
+      securityContext:
+        runAsUser: 0
+        # fsGroup: 2000
+      
       terminationGracePeriodSeconds: 30
       volumes:
-      # - name: varlog
-      #   hostPath:
-      #     path: /var/log
-      # - name: varlibdockercontainers
-      #   hostPath:
-      #     path: /var/lib/docker/containers
+      - name: varlog
+        hostPath:
+          path: /var/log
+      - name: varlibdockercontainers
+        hostPath:
+          path: /var/lib/docker/containers
       - name: data
         configMap:
           name: otel-collector-config
-      - name: examplelog
-        hostPath:
-          path: /home/ranand/log-poc/fluentd/otel-col/sample-logs
-      # - name: logdir
-      #   hostPath:
-      #     path: /home/ranand/log-poc/fluentd/fluentd/logs
 
 ---
 apiVersion: v1

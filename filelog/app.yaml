@@ -1,0 +1,42 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: log-gen
+  namespace: otel
+  labels:
+    app: log-gen
+spec:
+  selector:
+    matchLabels:
+      app: log-gen
+  replicas: 1
+  strategy:
+    rollingUpdate:
+      maxSurge: 25%
+      maxUnavailable: 25%
+    type: RollingUpdate
+  template:
+    metadata:
+      labels:
+        app: log-gen
+    spec:
+      containers:
+      - name: log-gen
+        image:  rht6226/random-logs:latest
+        env:
+          - name: LOG_DIR
+            value: "/logs/"
+        resources:
+          requests:
+            cpu: 100m
+            memory: 100Mi
+          limits:
+            cpu: 100m
+            memory: 100Mi
+        volumeMounts:
+        - name: log
+          mountPath: /logs/
+      volumes:
+        - name: log
+          emptyDir: {}
+      restartPolicy: Always
