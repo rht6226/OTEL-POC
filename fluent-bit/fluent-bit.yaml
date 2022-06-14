@@ -16,7 +16,7 @@ data:
     @INCLUDE input-kubernetes.conf
     @INCLUDE output-stdout.conf
     @INCLUDE filter-kubernetes.conf
-    # @INCLUDE forward.conf
+    @INCLUDE forward.conf
     
   input-kubernetes.conf: |
     [INPUT]
@@ -118,6 +118,8 @@ spec:
         - name: fluent-bit-config
           mountPath: /fluent-bit/etc/
       terminationGracePeriodSeconds: 10
+      securityContext:
+        runAsUser: 0
       volumes:
       - name: varlog
         hostPath:

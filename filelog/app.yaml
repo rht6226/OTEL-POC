@@ -5,6 +5,7 @@ metadata:
   namespace: otel
   labels:
     app: log-gen
+  
 spec:
   selector:
     matchLabels:
