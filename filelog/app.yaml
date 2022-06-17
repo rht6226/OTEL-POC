@@ -23,10 +23,8 @@ spec:
     spec:
       containers:
       - name: log-gen
-        image:  rht6226/random-logs:latest
-        env:
-          - name: LOG_DIR
-            value: "/logs/"
+        image: rht6226/format-log:v1
+        imagePullPolicy: Always
         resources:
           requests:
             cpu: 100m
@@ -34,10 +32,4 @@ spec:
           limits:
             cpu: 100m
             memory: 100Mi
-        volumeMounts:
-        - name: log
-          mountPath: /logs/
-      volumes:
-        - name: log
-          emptyDir: {}
       restartPolicy: Always
